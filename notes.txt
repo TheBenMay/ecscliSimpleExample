@@ -1,0 +1,87 @@
+export clusterName=ecscliexamplecluster
+export serviceName=ecscliexampleservice
+export taskDefinition=ecscliexampledefinition
+export repositoryName=ecscliexamplerepo
+export region=us-east-1
+export configName=ecsscliexampleconfig
+export targetGroupName=ecscliexamplett
+export loadBalancerName=ecscliexamplelb
+export containerName=ecsclisimpleexample
+export logGroupName=/ecs/ecscliexamplelog
+export ver=1.0.0
+export securityGroup=
+export subnetId=
+export VPC=
+export repositoryUri=
+export loadBalancerArn=
+export targetGroupArn=
+
+
+############################
+####Setup your image in Amazon Container Registry
+############################
+
+###Create empty repository in AWS Elastic Container Registry
+aws ecr create-repository --repository-name $repositoryName
+
+###Build container to create image
+sudo docker build -t $containerName:$ver .
+
+###Tag local image to my remote AWS Repository
+sudo docker tag $containerName:$ver $repositoryUri:$ver
+
+###Get AWS ECR login key
+sudo $(aws ecr get-login --no-include-email)
+
+###Push image to AWS Repository
+sudo docker push $repositoryUri:$ver
+
+
+############################
+####Build empty cluster in AWS ECS and configure the local ECS-CLI
+############################
+
+###Create empty cluster in AWS ECS
+ecs-cli up --empty --cluster $clusterName
+
+###Configure that cluster to your local ECS-CLI
+ecs-cli configure --cluster $clusterName --region $region --config-name $configName --default-launch-type FARGATE
+
+###Set the new config as your default
+ecs-cli configure default --config-name $configName
+
+
+############################
+####Create and config load balancer
+############################
+
+###Create network load balancer
+aws elbv2 create-load-balancer --name $loadBalancerName --type network --subnet-mappings SubnetId=$subnetId
+
+###Create target group for load balancer
+aws elbv2 create-target-group --name $targetGroupName --protocol TCP --port 80 --vpc-id $VPC --target-type ip
+
+###Connect set target group listener and assign to load balancer
+aws elbv2 create-listener --load-balancer-arn $loadBalancerArn \
+  --protocol TCP --port 80 \
+  --default-actions Type=forward,TargetGroupArn=$targetGroupArn
+
+
+############################
+####Create CloudWatch log group
+############################
+
+aws logs create-log-group --log-group-name $logGroupName
+
+
+############################
+####Build Service
+############################
+
+###Create service and task with definitions defined.
+ecs-cli compose --file docker-compose.aws.yml --ecs-params ecs-params.yml service create --launch-type FARGATE \
+  --target-group-arn $targetGroupArn \
+  --container-name $containerName --container-port 80
+
+###Start the service
+ecs-cli compose --file docker-compose.aws.yml service start

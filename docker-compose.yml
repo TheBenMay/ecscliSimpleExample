@@ -1,0 +1,6 @@
+version: '2'
+services:
+  ecsclisimpleexample:
+    build: .
+    ports:
+      - "80:80"

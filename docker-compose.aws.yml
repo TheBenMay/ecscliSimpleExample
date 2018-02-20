@@ -1,0 +1,12 @@
+version: '2'
+services:
+  ecsclisimpleexample:
+    image: ${repositoryUri}:${ver}
+    ports:
+      - "80:80"
+    logging:
+      driver: awslogs
+      options:
+          awslogs-group: ${logGroupName}
+          awslogs-region: ${region}
+          awslogs-stream-prefix: ecs

@@ -1,0 +1,21 @@
+version: 1
+
+task_definition:
+  ecs_network_mode: awsvpc
+  task_role_arn: YOURROLEARN
+  task_execution_role: YOURROLEARN
+  task_size:
+    cpu_limit: 256
+    mem_limit: 0.5GB
+  services:
+    ecsclisimpleexample:
+      essential: true
+
+run_params:
+  network_configuration:
+    awsvpc_configuration:
+      subnets:
+        - SUBNET
+      security_groups:
+        - SECURITYGROUP
+      assign_public_ip: ENABLED
